@@ -33,31 +33,31 @@ app.use(err => {
   console.error(err);
 });
 
-app.get('/api/settings', (req, res, next) => {
+app.get('/api/settings', (request, response, next) => {
   api
     .get('/conf')
     .then(response => {
-      res.json(response.data);
+      response.json(response.data);
     })
     .catch(error => {
       next(error);
     });
 });
-app.post('/api/settings', (req, res, next) => {
-  console.log(req.body);
-  console.log(req.params);
+app.post('/api/settings', (request, response, next) => {
+  console.log(request.body);
+  console.log(request.params);
   api
     .post('/conf', {
-      repositoryName: req.body.repositoryName,
-      buildCommand: req.body.buildCommand,
-      mainBranch: req.body.mainBranch,
-      period: +req.body.period
+      repositoryName: request.body.repositoryName,
+      buildCommand: request.body.buildCommand,
+      mainBranch: request.body.mainBranch,
+      period: +request.body.period
     })
     .then(() => {
-      return cloneRepository(req.body.repositoryName);
+      return cloneRepository(request.body.repositoryName);
     })
     .then(repositoryName => {
-      res.json(
+      response.json(
         String(
           `Settings were saved& The repository ${repositoryName} has been cloned.`
         )
@@ -67,18 +67,18 @@ app.post('/api/settings', (req, res, next) => {
       next(error);
     });
 });
-app.get('/api/builds', (req, res, next) => {
+app.get('/api/builds', (request, response, next) => {
   api
     .get('/build/list')
     .then(response => {
-      res.json(response.data);
+      response.json(response.data);
     })
     .catch(error => {
       next(error);
     });
 });
-app.post('/api/builds/:commitHash', (req, res, next) => {
-  getCommitInfo(req.params.commitHash)
+app.post('/api/builds/:commitHash', (request, response, next) => {
+  getCommitInfo(request.params.commitHash)
     .then(data => {
       const [message, author] = data
         .toString()
@@ -88,12 +88,12 @@ app.post('/api/builds/:commitHash', (req, res, next) => {
       api
         .post('/build/request', {
           commitMessage: message,
-          commitHash: req.params.commitHash,
+          commitHash: request.params.commitHash,
           branchName: 'master',
           authorName: author
         })
         .then(() => {
-          res.json({ message: message, author: author });
+          response.json({ message: message, author: author });
         })
         .catch(error => {
           next(error);
@@ -105,47 +105,50 @@ app.post('/api/builds/:commitHash', (req, res, next) => {
     });
 });
 
-app.get('/api/builds/:buildId', (req, res, next) => {
+app.get('/api/builds/:buildId', (request, response, next) => {
   api
-    .get('/build/details?buildId=' + req.params.buildId)
+    .get('/build/details?buildId=' + request.params.buildId)
     .then(response => {
-      res.json(response.data);
+      response.json(response.data);
     })
     .catch(error => {
       next(error);
     });
 });
 
-app.get('/api/builds/:buildId/logs', (req, res, next) => {
-  if (logs.isExist(req.params.buildId)) res.send(logs.get(req.params.buildId));
+app.get('/api/builds/:buildId/logs', (request, response, next) => {
+  if (logs.isExist(request.params.buildId))
+    response.send(logs.get(request.params.buildId));
   else {
     api
-      .get('/build/log?buildId=' + req.params.buildId)
+      .get('/build/log?buildId=' + request.params.buildId)
       .then(response => {
         if (!response.data) {
-          res.send(String(`There is no log ${req.params.buildId} for build`));
+          response.send(
+            String(`There is no log ${request.params.buildId} for build`)
+          );
         } else {
-          logs.set(req.params.buildId, response.data);
-          res.send(response.data);
+          logs.set(request.params.buildId, response.data);
+          response.send(response.data);
         }
       })
       .catch(error => {
         console.error('=====' + error);
         if (error.response.status === 500) {
-          res.send('Error 500.');
+          response.send('Error 500.');
         } else next(error);
       });
   }
 });
 
-app.get('/api/test', (req, res, next) => {
+app.get('/api/test', (request, response, next) => {
   api
     .get('/conf')
     .then(response => {
       return updateRepositoryStory(response.data.data);
     })
     .then(repository => {
-      res.send(
+      response.send(
         String(
           `The history of repository ${repository.repositoryName} branch ${repository.mainBranch} has been updated`
         )
@@ -183,8 +186,8 @@ app.get('/api/test', (req, res, next) => {
 
 // //readFileSync(`${__dirname}/api/settings.json`)
 // //i would add an api app.get('/api/v1/settings') to detect a version;
-// app.get(myURL, (req, res) => {
-//   res.status(200).json({
+// app.get(myURL, (request, res) => {
+//   response.status(200).json({
 //     status: 'success',
 //     // helps people to understand how many settings have been sent in JSON
 //     results: settings.length,
@@ -194,16 +197,16 @@ app.get('/api/test', (req, res, next) => {
 //   });
 // });
 
-// app.post('/api/settings', (req, res) => {
+// app.post('/api/settings', (request, res) => {
 //   //creating a new id to my setting data
 //   const newId = settings[settings.length - 1].id + 1;
-//   const newSetting = Object.assign({ id: newId }, req.body);
+//   const newSetting = Object.assign({ id: newId }, request.body);
 //   settings.push(newSetting);
 //   fs.writeFile(
 //     `${__dirname}/api/settings.json`,
 //     JSON.stringify(settings),
 //     err => {
-//       res.status(201).json({
+//       response.status(201).json({
 //         status: 'success',
 //         data: {
 //           setting: newSetting
