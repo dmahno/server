@@ -4,10 +4,14 @@ const path = require('path');
 const https = require('https');
 const axios = require('axios');
 const app = express();
-
 app.use(express.json());
-const { cloneRepo, updateRepoStory, getCommitInfo } = require('./repo');
-const buildLogs = require('./buildLogs');
+
+const {
+  cloneRepository,
+  updateRepositoryStory,
+  getCommitInfo
+} = require('./repository');
+const logs = require('./logs');
 
 const api = axios.create({
   baseURL: 'https://hw.shri.yandex/api/',
@@ -44,17 +48,19 @@ app.post('/api/settings', (req, res, next) => {
   console.log(req.params);
   api
     .post('/conf', {
-      repoName: req.body.repoName,
+      repositoryName: req.body.repositoryName,
       buildCommand: req.body.buildCommand,
       mainBranch: req.body.mainBranch,
       period: +req.body.period
     })
     .then(() => {
-      return cloneRepo(req.body.repoName);
+      return cloneRepository(req.body.repositoryName);
     })
-    .then(repoName => {
+    .then(repositoryName => {
       res.json(
-        String(`Настройки сохранены. Репозиторий ${repoName} склонирован.`)
+        String(
+          `Settings were saved& The repository ${repositoryName} has been cloned.`
+        )
       );
     })
     .catch(error => {
@@ -111,23 +117,22 @@ app.get('/api/builds/:buildId', (req, res, next) => {
 });
 
 app.get('/api/builds/:buildId/logs', (req, res, next) => {
-  if (buildLogs.isExist(req.params.buildId))
-    res.send(buildLogs.get(req.params.buildId));
+  if (logs.isExist(req.params.buildId)) res.send(logs.get(req.params.buildId));
   else {
     api
       .get('/build/log?buildId=' + req.params.buildId)
       .then(response => {
         if (!response.data) {
-          res.send(String(`Лога для сборки ${req.params.buildId} нет`));
+          res.send(String(`There is no log ${req.params.buildId} for build`));
         } else {
-          buildLogs.set(req.params.buildId, response.data);
+          logs.set(req.params.buildId, response.data);
           res.send(response.data);
         }
       })
       .catch(error => {
         console.error('=====' + error);
         if (error.response.status === 500) {
-          res.send('Что-то пошло не так. Ошибка 500.');
+          res.send('Error 500.');
         } else next(error);
       });
   }
@@ -137,12 +142,12 @@ app.get('/api/test', (req, res, next) => {
   api
     .get('/conf')
     .then(response => {
-      return updateRepoStory(response.data.data);
+      return updateRepositoryStory(response.data.data);
     })
-    .then(repo => {
+    .then(repository => {
       res.send(
         String(
-          `История ветки ${repo.mainBranch} репозитория ${repo.repoName} обновлена`
+          `The history of repository ${repository.repositoryName} branch ${repository.mainBranch} has been updated`
         )
       );
     })

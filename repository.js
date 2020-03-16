@@ -1,40 +1,42 @@
 const path = require('path');
 const fs = require('fs');
 const { spawn } = require('child_process');
-const localRepoName = 'local_repo';
+const localRepositoryName = 'local_repository';
 
-const cloneRepo = repoName => {
+const cloneRepository = repositoryName => {
   return new Promise((resolve, reject) => {
-    fs.access(path.resolve(__dirname, localRepoName), err => {
+    fs.access(path.resolve(__dirname, localRepositoryName), err => {
       if (err && err.code === 'ENOENT') {
-        const gitClone = spawn(`git clone ${repoName} local_repo`, {
+        const gitClone = spawn(`git clone ${repositoryName} local_repository`, {
           shell: true
         });
         gitClone.stdout.on('data', data => console.log(`stdout: ${data}`));
         gitClone.stderr.on('data', data => console.error(`stderr: ${data}`));
-        gitClone.on('close', () => resolve(repoName));
+        gitClone.on('close', () => resolve(repositoryName));
       } else {
         const gitRmClone = spawn(
-          `rm -rf ${localRepoName} && git clone ${repoName} local_repo`,
+          `rm -rf ${localRepositoryName} && git clone ${repositoryName} local_repository`,
           { shell: true }
         );
         gitRmClone.stdout.on('data', data => console.log(`stdout: ${data}`));
         gitRmClone.stderr.on('data', data => console.error(`stderr: ${data}`));
-        gitRmClone.on('close', () => resolve(repoName));
+        gitRmClone.on('close', () => resolve(repositoryName));
       }
     });
   });
 };
 
-const updateRepoStory = repo => {
+const updateRepositoryStory = repository => {
   return new Promise((resolve, reject) => {
-    const updateRepo = spawn(
-      `cd ${localRepoName} && git checkout ${repo.mainBranch} && git pull`,
+    const updateRepository = spawn(
+      `cd ${localRepositoryName} && git checkout ${repository.mainBranch} && git pull`,
       { shell: true }
     );
-    updateRepo.stdout.on('data', data => console.log(`stdout: ${data}`));
-    updateRepo.stderr.on('data', data => console.error(`stderr: ${data}`));
-    updateRepo.on('close', () => resolve(repo));
+    updateRepository.stdout.on('data', data => console.log(`stdout: ${data}`));
+    updateRepository.stderr.on('data', data =>
+      console.error(`stderr: ${data}`)
+    );
+    updateRepository.on('close', () => resolve(repository));
   });
 };
 
@@ -53,4 +55,4 @@ const getCommitInfo = commitHash => {
     log.on('close', data => resolve(data));
   });
 };
-module.exports = { cloneRepo, updateRepoStory, getCommitInfo };
+module.exports = { cloneRepository, updateRepositoryStory, getCommitInfo };
